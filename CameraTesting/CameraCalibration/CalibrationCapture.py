@@ -1,12 +1,14 @@
 import cv2 as cv
 import os
+import pyrealsense2 as rs
+import numpy as np
 
 Chess_Board_Dimensions = (9, 6)
 
 n = 0  # image counter
 
 # checks images dir is exist or not
-image_path = "images"
+image_path = "CameraTesting/CameraCalibration/images"
 
 Dir_Check = os.path.isdir(image_path)
 
@@ -27,20 +29,30 @@ def detect_checker_board(image, grayImage, criteria, boardDimension):
 
     return image, ret
 
+# Intel RealSense Vars
+pipe = rs.pipeline()
+cfg  = rs.config()
+cfg.enable_stream(rs.stream.color, 640,480, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.depth, 640,480, rs.format.z16, 30)
+pipe.start(cfg)
 
-cap = cv.VideoCapture(0)
 
 while True:
-    _, frame = cap.read()
-    copyFrame = frame.copy()
-    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    frame = pipe.wait_for_frames()
+    depth_frame = frame.get_depth_frame()
+    color_frame = frame.get_color_frame()
+    depth_image = np.asanyarray(depth_frame.get_data())
+    color_image = np.asanyarray(color_frame.get_data())
+
+    copyFrame = color_image
+    gray = cv.cvtColor(color_image, cv.COLOR_BGR2GRAY)
 
     image, board_detected = detect_checker_board(
-        frame, gray, criteria, Chess_Board_Dimensions
+        color_image, gray, criteria, Chess_Board_Dimensions
     )
     # print(ret)
     cv.putText(
-        frame,
+        color_image,
         f"saved_img : {n}",
         (30, 40),
         cv.FONT_HERSHEY_PLAIN,
@@ -50,7 +62,7 @@ while True:
         cv.LINE_AA,
     )
 
-    cv.imshow("frame", frame)
+    cv.imshow("frame", color_image)
     # copyframe; without augmentation
     cv.imshow("copyFrame", copyFrame)
 
@@ -64,7 +76,6 @@ while True:
 
         print(f"saved image number {n}")
         n += 1  # the image counter: incrementing
-cap.release()
 cv.destroyAllWindows()
-
+pipe.stop()
 print("Total saved Images:", n)

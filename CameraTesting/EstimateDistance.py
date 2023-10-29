@@ -1,13 +1,14 @@
 import cv2 as cv
 from cv2 import aruco
 import numpy as np
+import pyrealsense2 as rs
 
 ARUCO_DICT = {
     "DICT_7x7_50" : cv.aruco.DICT_7X7_50
 }
 
 # load in the calibration data
-calib_data_path = "CameraCalibration/calib_data/MultiMatrix.npz"
+calib_data_path = "CameraTesting/CameraCalibration/calib_data/MultiMatrix.npz"
 
 calib_data = np.load(calib_data_path)
 print(calib_data.files)
@@ -29,23 +30,31 @@ arucoDict = cv.aruco.getPredefinedDictionary(ARUCO_DICT[aruco_type])
 arucoParams = cv.aruco.DetectorParameters()
 detector = cv.aruco.ArucoDetector(arucoDict, arucoParams)
 
-cap = cv.VideoCapture(0)
+pipe = rs.pipeline()
+cfg  = rs.config()
+cfg.enable_stream(rs.stream.color, 640,480, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.depth, 640,480, rs.format.z16, 30)
+pipe.start(cfg)
 
 while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    gray_frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    marker_corners, marker_IDs, reject = detector.detectMarkers(frame)
-    for i in range(len(marker_IDs)):
-        img_points = marker_corners[i][0]
+    frame = pipe.wait_for_frames()
+    depth_frame = frame.get_depth_frame()
+    color_frame = frame.get_color_frame()
+    depth_image = np.asanyarray(depth_frame.get_data())
+    color_image = np.asanyarray(color_frame.get_data())
+    gray_frame = cv.cvtColor(color_image, cv.COLOR_BGR2GRAY)
+    
+    marker_corners, marker_IDs, reject = detector.detectMarkers(color_image)
+    if(len(marker_corners) > 0):
+        for i in range(len(marker_IDs)):
+            img_points = marker_corners[i][0]
 
     if marker_corners:
         rVec, tVec, _ = cv.solvePnP(obj_points, img_points, cam_mat, dist_coef)
         total_markers = range(0, marker_IDs.size)
         for ids, corners, i in zip(marker_IDs, marker_corners, total_markers):
             cv.polylines(
-                frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv.LINE_AA
+                color_image, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv.LINE_AA
             )
             corners = corners.reshape(4, 2)
             corners = corners.astype(int)
@@ -55,13 +64,11 @@ while True:
             bottom_left = corners[3].ravel()
 
             # Calculating the distance
-            distance = np.sqrt(
-                tVec[i][0][2] ** 2 + tVec[i][0][0] ** 2 + tVec[i][0][1] ** 2
-            )
+            distance = np.sqrt((tVec[i][0][2] ** 2) + (tVec[i][0][0] ** 2) + (tVec[i][0][1] ** 2))
             # Draw the pose of the marker
-            point = cv.drawFrameAxes(frame, cam_mat, dist_coef, rVec[i], tVec[i], 4, 4)
+            point = cv.drawFrameAxes(color_image, cam_mat, dist_coef, rVec[i], tVec[i], 4, 4)
             cv.putText(
-                frame,
+                color_image,
                 f"id: {ids[0]} Dist: {round(distance, 2)}",
                 top_right,
                 cv.FONT_HERSHEY_PLAIN,
@@ -71,7 +78,7 @@ while True:
                 cv.LINE_AA,
             )
             cv.putText(
-                frame,
+                color_image,
                 f"x:{round(tVec[i][0][0],1)} y: {round(tVec[i][0][1],1)} ",
                 bottom_right,
                 cv.FONT_HERSHEY_PLAIN,
@@ -81,9 +88,9 @@ while True:
                 cv.LINE_AA,
             )
             # print(ids, "  ", corners)
-    cv.imshow("frame", frame)
+    cv.imshow("frame", color_image)
     key = cv.waitKey(1)
     if key == ord("q"):
         break
-cap.release()
+pipe.stop()
 cv.destroyAllWindows()

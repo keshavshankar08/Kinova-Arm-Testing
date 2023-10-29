@@ -12,7 +12,7 @@ SQUARE_SIZE = 22  # millimeters (change it according to printed size)
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 
-calib_data_path = "../calib_data"
+calib_data_path = "CameraTesting/CameraCalibration/calib_data"
 CHECK_DIR = os.path.isdir(calib_data_path)
 
 
@@ -39,7 +39,7 @@ obj_points_3D = []  # 3d point in real world space
 img_points_2D = []  # 2d points in image plane
 
 # The images directory path
-image_dir_path = "CameraCalibration/images"
+image_dir_path = "CameraTesting/CameraCalibration/images"
 
 files = os.listdir(image_dir_path)  # list of names of all the files present
 for file in files:

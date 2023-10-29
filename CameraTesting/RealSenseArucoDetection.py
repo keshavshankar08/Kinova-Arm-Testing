@@ -5,6 +5,8 @@ import pyrealsense2 as rs
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import *
 import time
+import shutil
+import os
 
 # Dictionary of all aruco marker sizes
 ARUCO_DICT = {
@@ -68,11 +70,12 @@ def createDepthPlot(depth_image, pointNumber):
     ax = fig.add_subplot(111, projection='3d')
     y, x = np.mgrid[:depth_image.shape[0], :depth_image.shape[1]]
     z = depth_image
-    ax.scatter(x, y, z, c=z, cmap='viridis')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    fig.savefig("DepthPlots/DepthPlot" + str(pointNumber) + ".png")
+    ax.scatter(z, x, y, c=z, cmap='viridis')
+    ax.set_xlabel('Z')
+    ax.set_ylabel('X')
+    ax.set_zlabel('Y')
+    ax.view_init(elev=30, azim=40, roll=0)
+    fig.savefig("CameraTesting/DepthPlots/DepthPlot" + str(pointNumber) + ".png")
 
 # Aruco variables
 arucoType = "DICT_7X7_50"
@@ -92,6 +95,17 @@ timerStart = timerEnd = None
 
 # Keeps track of number of data points recorded
 numDataPoints = 0
+
+# Clear past plots
+if(os.path.exists("CameraTesting/DepthPlots")):
+    shutil.rmtree("CameraTesting/DepthPlots")
+if(os.path.exists("CameraTesting/MarkerPlots")):
+    shutil.rmtree("CameraTesting/MarkerPlots")
+if(os.path.exists("CameraTesting/DepthColorPlots")):
+    shutil.rmtree("CameraTesting/DepthColorPlots")
+os.mkdir("CameraTesting/DepthPlots")
+os.mkdir("CameraTesting/MarkerPlots")
+os.mkdir("CameraTesting/DepthColorPlots")
 
 while True:
     # Get depth and color frames from camera
@@ -142,7 +156,8 @@ while True:
             timerEnd = time.time()
             print("Aruco tag detected in: " + str(timerEnd - timerStart) + " seconds.")
             createDepthPlot(depth_image, numDataPoints)
-            cv.imwrite("MarkerPlots/MarkerPlot" + str(numDataPoints) + ".png", detected_markers)
+            cv.imwrite("CameraTesting/MarkerPlots/MarkerPlot" + str(numDataPoints) + ".png", detected_markers)
+            cv.imwrite("CameraTesting/DepthColorPlots/DepthColorPlot" + str(numDataPoints) + ".png", depth_image_colorized)
             timerStart = timerEnd = None
     
     if(key == ord('q')):
