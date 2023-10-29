@@ -1,0 +1,152 @@
+import cv2 as cv
+import cv2.aruco as aruco
+import numpy as np
+import pyrealsense2 as rs
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import *
+import time
+
+# Dictionary of all aruco marker sizes
+ARUCO_DICT = {
+    "DICT_7X7_50": cv.aruco.DICT_7X7_50
+}
+'''
+"DICT_4X4_50": cv.aruco.DICT_4X4_50,
+"DICT_4X4_100": cv.aruco.DICT_4X4_100,
+"DICT_4X4_250": cv.aruco.DICT_4X4_250,
+"DICT_4X4_1000": cv.aruco.DICT_4X4_1000,
+"DICT_5X5_50": cv.aruco.DICT_5X5_50,
+"DICT_5X5_100": cv.aruco.DICT_5X5_100,
+"DICT_5X5_250": cv.aruco.DICT_5X5_250,
+"DICT_5X5_1000": cv.aruco.DICT_5X5_1000,
+"DICT_6X6_50": cv.aruco.DICT_6X6_50,
+"DICT_6X6_100": cv.aruco.DICT_6X6_100,
+"DICT_6X6_250": cv.aruco.DICT_6X6_250,
+"DICT_6X6_1000": cv.aruco.DICT_6X6_1000,
+"DICT_7X7_50": cv.aruco.DICT_7X7_50,
+"DICT_7X7_100": cv.aruco.DICT_7X7_100,
+"DICT_7X7_250": cv.aruco.DICT_7X7_250,
+"DICT_7X7_1000": cv.aruco.DICT_7X7_1000,
+"DICT_ARUCO_ORIGINAL": cv.aruco.DICT_ARUCO_ORIGINAL,
+"DICT_APRILTAG_16h5": cv.aruco.DICT_APRILTAG_16h5,
+"DICT_APRILTAG_25h9": cv.aruco.DICT_APRILTAG_25h9,
+"DICT_APRILTAG_36h10": cv.aruco.DICT_APRILTAG_36h10,
+"DICT_APRILTAG_36h11": cv.aruco.DICT_APRILTAG_36h11
+'''
+
+# Returns current color image with aruco tags marked
+def aruco_display(corners, ids, rejected, image):
+    if(len(corners) > 0):
+
+        ids = ids.flatten()
+
+        for(markerCorner, markerID) in zip(corners, ids):
+            corners = markerCorner.reshape((4,2))
+            (topLeft, topRight, bottomRight, bottomLeft) = corners
+
+            topRight = (int(topRight[0]), int(topRight[1]))
+            bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
+            bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
+            topLeft = (int(topLeft[0]), int(topLeft[1]))
+
+            cv.line(image, topLeft, topRight, (0, 255, 0), 2)
+            cv.line(image, topRight, bottomRight, (0, 255, 0), 2)
+            cv.line(image, bottomRight, bottomLeft, (0, 255, 0), 2)
+            cv.line(image, bottomLeft, topLeft, (0, 255, 0), 2)
+
+            cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+            cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+            cv.circle(image, (cX, cY), 4, (0, 0, 255), -1)
+            cv.putText(image, str(markerID), (topLeft[0], topLeft[1] - 1), cv.FONT_HERSHEY_COMPLEX, 0.5, (0, 255, 0), 2)
+            #print("[Inference] Aruco marker ID: {}".format(markerID))
+
+    return image
+
+# Creates and saves a plot of current depth image
+def createDepthPlot(depth_image, pointNumber):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    y, x = np.mgrid[:depth_image.shape[0], :depth_image.shape[1]]
+    z = depth_image
+    ax.scatter(x, y, z, c=z, cmap='viridis')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    fig.savefig("DepthPlots/DepthPlot" + str(pointNumber) + ".png")
+
+# Aruco variables
+arucoType = "DICT_7X7_50"
+arucoDict = cv.aruco.getPredefinedDictionary(ARUCO_DICT[arucoType])
+arucoParams = cv.aruco.DetectorParameters()
+arucoDetector = cv.aruco.ArucoDetector(arucoDict, arucoParams)
+
+# RealSense variables
+pipe = rs.pipeline()
+cfg  = rs.config()
+cfg.enable_stream(rs.stream.color, 640,480, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.depth, 640,480, rs.format.z16, 30)
+pipe.start(cfg)
+
+# Timer variables
+timerStart = timerEnd = None
+
+# Keeps track of number of data points recorded
+numDataPoints = 0
+
+while True:
+    # Get depth and color frames from camera
+    frame = pipe.wait_for_frames()
+    depth_frame = frame.get_depth_frame()
+    color_frame = frame.get_color_frame()
+
+    # Convert frames to images
+    depth_image = np.asanyarray(depth_frame.get_data())
+    color_image = np.asanyarray(color_frame.get_data())
+
+    # Convert color image to other useful images
+    gray_image = cv.cvtColor(color_image, cv.COLOR_BGR2GRAY)
+    bgr_image = cv.cvtColor(color_image, cv.COLOR_RGB2BGR)
+    binary_image = cv.threshold(bgr_image, 127, 255, cv.THRESH_BINARY)[1]
+
+    # Convert depth image to other useful images
+    depth_image_colorized = cv.applyColorMap(cv.convertScaleAbs(depth_image, alpha = 0.5), cv.COLORMAP_JET)
+    
+    # Display default image
+    cv.imshow("Camera Feed", color_image)
+    #cv.imshow("Depth Image", depth_image)
+    #cv.imshow("Depth Image Colorized", depth_image_colorized)
+    #cv.imshow("Binary Image", binary_image)
+
+    # Get any key press
+    key = cv.waitKey(1)
+
+    # Start trial
+    if(key == ord('s')):
+        # Gets start time
+        timerStart = time.time()
+        numDataPoints += 1
+
+    # Trial started process
+    if(timerStart is not None):
+        # Run aruco detection
+        corners, ids, rejected = arucoDetector.detectMarkers(gray_image)
+
+        # Create image with bounding boxes for markers
+        detected_markers = aruco_display(corners, ids, rejected, color_image)
+        
+        # Display marker detection result
+        cv.imshow("Marker Detection", detected_markers)
+
+        # If a tag is detected
+        if(ids is not None):
+            timerEnd = time.time()
+            print("Aruco tag detected in: " + str(timerEnd - timerStart) + " seconds.")
+            createDepthPlot(depth_image, numDataPoints)
+            cv.imwrite("MarkerPlots/MarkerPlot" + str(numDataPoints) + ".png", detected_markers)
+            timerStart = timerEnd = None
+    
+    if(key == ord('q')):
+        break
+
+cv.destroyAllWindows()
+pipe.stop()
