@@ -103,9 +103,12 @@ if(os.path.exists("CameraTesting/MarkerPlots")):
     shutil.rmtree("CameraTesting/MarkerPlots")
 if(os.path.exists("CameraTesting/DepthColorPlots")):
     shutil.rmtree("CameraTesting/DepthColorPlots")
+if(os.path.exists("CameraTesting/TimingData.txt")):
+    os.remove("CameraTesting/TimingData.txt")
 os.mkdir("CameraTesting/DepthPlots")
 os.mkdir("CameraTesting/MarkerPlots")
 os.mkdir("CameraTesting/DepthColorPlots")
+file = open("CameraTesting/TimingData.txt","w")
 
 while True:
     # Get depth and color frames from camera
@@ -116,6 +119,9 @@ while True:
     # Convert frames to images
     depth_image = np.asanyarray(depth_frame.get_data())
     color_image = np.asanyarray(color_frame.get_data())
+    color_image_flipped = cv.flip(color_image, 1)
+    #depth_image = cv.flip(color_image, 1)
+    #color_image = cv.flip(color_image, 1)
 
     # Convert color image to other useful images
     gray_image = cv.cvtColor(color_image, cv.COLOR_BGR2GRAY)
@@ -126,7 +132,7 @@ while True:
     depth_image_colorized = cv.applyColorMap(cv.convertScaleAbs(depth_image, alpha = 0.5), cv.COLORMAP_JET)
     
     # Display default image
-    cv.imshow("Camera Feed", color_image)
+    cv.imshow("Camera Feed", color_image_flipped)
     #cv.imshow("Depth Image", depth_image)
     #cv.imshow("Depth Image Colorized", depth_image_colorized)
     #cv.imshow("Binary Image", binary_image)
@@ -155,6 +161,7 @@ while True:
         if(ids is not None):
             timerEnd = time.time()
             print("Aruco tag detected in: " + str(timerEnd - timerStart) + " seconds.")
+            file.write("Trial " + str(numDataPoints) + ": " + str(round((timerEnd - timerStart), 3)) + " seconds.\n")
             createDepthPlot(depth_image, numDataPoints)
             cv.imwrite("CameraTesting/MarkerPlots/MarkerPlot" + str(numDataPoints) + ".png", detected_markers)
             cv.imwrite("CameraTesting/DepthColorPlots/DepthColorPlot" + str(numDataPoints) + ".png", depth_image_colorized)
