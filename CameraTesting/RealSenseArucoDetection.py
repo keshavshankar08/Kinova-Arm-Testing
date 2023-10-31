@@ -10,7 +10,7 @@ import os
 
 # Dictionary of all aruco marker sizes
 ARUCO_DICT = {
-    "DICT_7X7_50": cv.aruco.DICT_7X7_50
+    "DICT_6X6_50": cv.aruco.DICT_6X6_50
 }
 '''
 "DICT_4X4_50": cv.aruco.DICT_4X4_50,
@@ -78,7 +78,7 @@ def createDepthPlot(depth_image, pointNumber):
     fig.savefig("CameraTesting/DepthPlots/DepthPlot" + str(pointNumber) + ".png")
 
 # Aruco variables
-arucoType = "DICT_7X7_50"
+arucoType = "DICT_6X6_50"
 arucoDict = cv.aruco.getPredefinedDictionary(ARUCO_DICT[arucoType])
 arucoParams = cv.aruco.DetectorParameters()
 arucoDetector = cv.aruco.ArucoDetector(arucoDict, arucoParams)
