@@ -4,8 +4,26 @@ import numpy as np
 import pyrealsense2 as rs
 
 ARUCO_DICT = {
-    "DICT_7x7_50" : cv.aruco.DICT_7X7_50
+    "DICT_6X6_50": cv.aruco.DICT_6X6_50
 }
+'''
+	"DICT_4X4_50": cv2.aruco.DICT_4X4_50,
+	"DICT_4X4_100": cv2.aruco.DICT_4X4_100,
+	"DICT_4X4_250": cv2.aruco.DICT_4X4_250,
+	"DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
+	"DICT_5X5_50": cv2.aruco.DICT_5X5_50,
+	"DICT_5X5_100": cv2.aruco.DICT_5X5_100,
+	"DICT_5X5_250": cv2.aruco.DICT_5X5_250,
+	"DICT_5X5_1000": cv2.aruco.DICT_5X5_1000,
+	"DICT_6X6_50": cv2.aruco.DICT_6X6_50,
+	"DICT_6X6_100": cv2.aruco.DICT_6X6_100,
+	"DICT_6X6_250": cv2.aruco.DICT_6X6_250,
+	"DICT_6X6_1000": cv2.aruco.DICT_6X6_1000,
+	"DICT_7X7_50": cv2.aruco.DICT_7X7_50,
+	"DICT_7X7_100": cv2.aruco.DICT_7X7_100,
+	"DICT_7X7_250": cv2.aruco.DICT_7X7_250,
+	"DICT_7X7_1000": cv2.aruco.DICT_7X7_1000
+'''
 
 # load in the calibration data
 calib_data_path = "CameraTesting/CameraCalibration/calib_data/MultiMatrix.npz"
@@ -25,7 +43,7 @@ obj_points = np.array([[-MARKER_SIZE / 2, MARKER_SIZE / 2, 0],
                                [MARKER_SIZE / 2, -MARKER_SIZE / 2, 0],
                                [-MARKER_SIZE / 2, -MARKER_SIZE / 2, 0]])
 
-aruco_type = "DICT_7x7_50"
+aruco_type = "DICT_6x6_50"
 arucoDict = cv.aruco.getPredefinedDictionary(ARUCO_DICT[aruco_type])
 arucoParams = cv.aruco.DetectorParameters()
 detector = cv.aruco.ArucoDetector(arucoDict, arucoParams)
